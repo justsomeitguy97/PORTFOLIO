@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+
+<body>
+  <div class="c">
+    <h1>Portfolio</h1>
+
+    <main id="content"></main>
+
+    <footer id="footer"></footer>
+  </div>
+
+  <script>
+    const base = "content/contents/";
+
+    const textFiles = [
+      "intro",
+      "skills",
+      "kwaliteiten",
+      "werkervaring",
+      "contact"
+    ];
+
+    // Add your certificate PDF filenames here:
+    const certificates = [
+      // "certificate-1.pdf",
+      // "certificate-2.pdf"
+    ];
+
+    const cvFile = "cv.pdf";
+
+    function escapeHTML(text) {
+      return text.replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[character]);
+    }
+
+    function createTitle(filename) {
+      return filename.charAt(0).toUpperCase() + filename.slice(1);
+    }
+
+    async function loadText(filename) {
+      try {
+        const response = await fetch(`${base}${filename}.txt`);
+
+        if (!response.ok) {
+          return false;
+        }
+
+        const text = (await response.text()).trim();
+
+        if (!text) {
+          return false;
+        }
+
+        const section = document.createElement("section");
+        section.innerHTML = `
+          <h2>${createTitle(filename)}</h2>
+          <p>${escapeHTML(text).replace(/\n/g, "<br>")}</p>
+        `;
+
+        document.getElementById("content").appendChild(section);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function loadLinks() {
+      try {
+        const response = await fetch(`${base}links.txt`);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const lines = (await response.text()).split(/\r?\n/);
+        const links = [];
+
+        for (const line of lines) {
+          const match = line.match(/<(.*?)>(.*?)<\/.*?>/);
+
+          if (match) {
+            links.push({
+              name: match[1],
+              url: match[2]
+            });
+          }
+        }
+
+        if (!links.length) {
+          return;
+        }
+
+        const container = document.getElementById("content");
+        container.insertAdjacentHTML("beforeend", "<h2>Links</h2>");
+
+        for (const link of links) {
+          const paragraph = document.createElement("p");
+          paragraph.innerHTML = `
+            <b>${escapeHTML(link.name)}</b>:
+            <a href="${escapeHTML(link.url)}">
+              ${escapeHTML(link.url)}
+            </a>
+          `;
+
+          container.appendChild(paragraph);
+        }
+      } catch {}
+    }
+
+    function loadPDFs() {
+      const container = document.getElementById("content");
+
+      if (certificates.length) {
+        container.insertAdjacentHTML(
+          "beforeend",
+          `<h2>Certificates</h2>
+           <div class="g">
+             ${certificates.map(file =>
+               `<iframe src="${base}${file}" title="${file}"></iframe>`
+             ).join("")}
+           </div>`
+        );
+      }
+
+      container.insertAdjacentHTML(
+        "beforeend",
+        `<h2>CV</h2>
+         <iframe src="${base}${cvFile}" title="CV"></iframe>`
+      );
+    }
+
+    async function initialise() {
+      const results = await Promise.all(textFiles.map(loadText));
+
+      if (!results.some(Boolean)) {
+        document.getElementById("content").innerHTML =
+          "<div style='text-align:center'><h1>Coming soon...</h1></div>";
+
+        return;
+      }
+
+      loadPDFs();
+      await loadLinks();
+
+      const currentYear = new Date().getFullYear();
+      const age = currentYear - 2000;
+      const copyright =
+        currentYear === 2024 ? "2024" : `2024-${currentYear}`;
+
+      document.getElementById("footer").innerHTML =
+        `Age ${age} &bull; &copy; ${copyright}`;
+    }
+
+    initialise();
+  </script>
+</body>
+</html>
